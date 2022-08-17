@@ -1,0 +1,351 @@
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@200;400&display=swap" rel="stylesheet">
+  <style>
+      @keyframes fadeIn {
+          from {
+              opacity: 0;
+          }
+          to {
+              opacity: 1;
+          }
+      }
+
+
+      @keyframes darkness {
+          from {
+              background: #222222;
+          }
+          to {
+              background: #151515;
+          }
+      }
+
+      img {
+          border-radius: 15px;
+      }
+
+      * {
+          box-sizing: border-box;
+          padding: 0;
+          margin: 0;
+          outline: none;
+          font-family: 'Barlow Semi Condensed', sans-serif;
+          font-weight: 200;
+      }
+
+      body, html {
+          width: 100%;
+          height: 100%;
+          background: #222222;
+          color: white;
+          font-size: 18px;
+      }
+
+      body.cat {
+          background: #151515;
+          animation: darkness 0.3s;
+      }
+
+      #connection_box {
+          font-size: 35px;
+      }
+
+      #container {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          height: 100%;
+          flex-direction: column;
+          padding: 25px;
+      }
+
+      #main_box {
+          width: 100%;
+          animation: fadeIn 1s;
+          padding: 25px;
+      }
+
+      #main_box > div {
+          background: #282828;
+          margin: 5px 25px;
+          padding: 10px;
+          border-radius: 5px;
+      }
+
+      input {
+          width: 100%;
+      }
+
+      .hidden {
+          display: none;
+          animation: none;
+      }
+
+      #first_segment {
+          width: 100%;
+      }
+
+      hr {
+          margin: 25px 0;
+      }
+
+      textarea, input[type=number] {
+          width: 100%;
+          height: 100px;
+          border: 0;
+          padding: 10px;
+          font-weight: 400;
+      }
+
+      input[type=number] {
+          height: auto;
+      }
+
+      input[type=button] {
+          margin: 5px 0;
+          background: #84ffd8;
+          border: 0;
+          padding: 10px 25px;
+          cursor: pointer;
+      }
+
+      .help {
+          color: #b0b0b0;
+          margin-bottom: 15px;
+          font-size: 17px;
+      }
+
+      #image_content {
+          height: 300px;
+          display: flex;
+          align-items: flex-end;
+          justify-content: center;
+          padding: 25px 0;
+      }
+
+      #image_content img {
+          max-height: 100%;
+      }
+
+      #image_content.cat #cat, #image_content:not(.cat) #logo {
+          display: block;
+      }
+
+      #image_content.cat #logo, #image_content:not(.cat) #cat {
+          display: none;
+      }
+
+      #cat {
+          border-radius: 50%;
+      }
+  </style>
+</head>
+
+<body>
+<div id="container">
+  <div>
+    <div id="image_content">
+      <img src="./cat.gif" alt="./cat.gif" id="cat" />
+      <img src="https://i.imgur.com/am9fGyn.png" alt="" id="logo" />
+    </div>
+  </div>
+
+  <div id="connection_box">
+    No connection with socket
+  </div>
+
+  <div id="main_box" class="hidden">
+    <div>
+      <div>1. Single row of leds with customized range (from 0 to <span id="first_segment_value">0</span>)</div>
+      <input
+        id="first_segment"
+        type="range"
+        min="0"
+        max="60"
+        step="1"
+        value="0"
+      />
+
+      <hr />
+    </div>
+
+    <div>
+      <div>2. Single row of leds with customized color</div>
+      <input
+        type="color"
+        id="second_segment"
+        value="#000000"
+      />
+    </div>
+
+    <div>
+      <div>3. Eval code</div>
+      <textarea id="eval">
+//GRB (not RGB)
+require("neopixel").write(NodeMCU.D6, [
+   0, 0, 255,
+   0, 0, 255,
+]);
+      </textarea>
+      <input type="button" id="send" value="Run this code" />
+    </div>
+
+    <div>
+      <div>4. Captain America rotator</div>
+      <input
+        id="rotate_value"
+        type="number"
+        value="0"
+      />
+      <div class="help">2048 = 360&#176; -> <span id="rotate_hint_1">0</span> = ~<span id="rotate_hint_2">0</span>&#176;(<span
+        id="rotate_hint_3">0</span>s)
+      </div>
+      <input type="button" id="rotate" value="Rotate Captain America on his bird" />
+      <hr />
+    </div>
+  </div>
+</div>
+
+<script>
+  window.onload = function() {
+    function connect() {
+      const ws = new WebSocket("ws://<<IP>>/ws", "protocolOne");
+
+      const connection = document.getElementById("connection_box");
+      const main = document.getElementById("main_box");
+
+      const first_segment = document.getElementById("first_segment");
+      const first_segment_value = document.getElementById("first_segment_value");
+      const second_segment = document.getElementById("second_segment");
+
+      const image_content = document.getElementById("image_content");
+
+      const cat = document.getElementById("cat");
+
+      const eval_code = document.getElementById("eval");
+      const eval_button = document.getElementById("send");
+
+      const rotate_value = document.getElementById("rotate_value");
+      const rotate_button = document.getElementById("rotate");
+      const rotate_hint_1 = document.getElementById("rotate_hint_1");
+      const rotate_hint_2 = document.getElementById("rotate_hint_2");
+      const rotate_hint_3 = document.getElementById("rotate_hint_3");
+
+      rotate_value.addEventListener("keyup", (event) => {
+        const value = parseInt(event.target.value, 10);
+        const degrees = (value * 360 / 2048).toFixed(2);
+        const time = (value / 100).toFixed(2);
+
+        rotate_hint_1.textContent = value.toString();
+        rotate_hint_2.textContent = degrees.toString();
+        rotate_hint_3.textContent = time;
+      });
+
+      rotate_button.addEventListener("click", () => sts("rotate", parseInt(rotate_value.value, 10)));
+      eval_button.addEventListener("click", () => sts("eval", eval_code.value));
+
+      first_segment.addEventListener("change", (event) => {
+        const v = event.target.value;
+        first_segment_value.textContent = v;
+
+        sts("length", v);
+      });
+
+      second_segment.addEventListener("change", (e) => {
+        const value = e.target.value.match(/[A-Za-z0-9]{2}/g);
+        const rgb = value.map((p) => parseInt(p, 16));
+
+        sts("color", rgb);
+      });
+
+      const sts = (action, value) => ws.send(JSON.stringify({
+        action, value,
+      }));
+
+      const rgbToHex = (rgb) => {
+        const rs = function(color) {
+          let hex = Number(color).toString(16);
+          if (hex.length < 2) {
+            hex = "0" + hex;
+          }
+
+          return hex;
+        };
+
+        return "#" + rs(rgb[0]) + rs(rgb[1]) + rs(rgb[2]);
+      };
+
+      ws.onopen = () => {
+        console.log("Socket connection opened");
+        const timeout = setTimeout(() => {
+          connection.classList.add("hidden");
+          main.classList.remove("hidden");
+
+          clearTimeout(timeout);
+        }, 1000);
+      };
+
+      ws.onmessage = (e) => {
+        console.log(e.data);
+        const data = JSON.parse(e.data);
+        if (data.broadcast) {
+          const broadcast = data.broadcast;
+          console.log("Broadcast received");
+          console.log(broadcast);
+          switch (broadcast.action) {
+            case "length":
+              first_segment.value = broadcast.value;
+              break;
+            case "color":
+              second_segment.value = rgbToHex(broadcast.value);
+              break;
+            case "button":
+              const url = cat.getAttribute("alt");
+              cat.src = url + "?r=" + Math.random() * new Date().getTime();
+
+              image_content.classList.add("cat");
+              document.body.classList.add("cat");
+
+              const timeout = setTimeout(function() {
+                document.body.classList.remove("cat");
+                image_content.classList.remove("cat");
+                clearTimeout(timeout);
+              }, 3500);
+              break;
+          }
+
+          return;
+        }
+
+        console.log("Message received");
+        console.log(data);
+      };
+
+      ws.onclose = () => {
+        console.log("Socket connection closed");
+        connection.classList.remove("hidden");
+        main.classList.add("hidden");
+
+        setTimeout(function() {
+          console.log("Trying to reconnect with socket");
+          connect();
+        }, 1000);
+      };
+
+      ws.onerror = (e) => {
+        console.log("Socket error");
+        console.log(e);
+      };
+    }
+
+    connect();
+  };
+</script>
+</body>
+</html>

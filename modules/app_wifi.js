@@ -1,0 +1,1 @@
+exports.connect=function(b){let a=require("Wifi");a.disconnect(),a.stopAP(),console.log("Connecting to WiFi"),a.connect(b.ssid,{password:b.password},a=>{if(null!==a)throw a}),a.on("connected",function(){console.log("WiFi Connected"),b.onConnected()})}
